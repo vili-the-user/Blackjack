@@ -63,4 +63,12 @@ fn menu() {
     if input_int == 1 {
         game::new_game();
     }
+
+    else if input_int == 2 {
+        game::load_game();
+    }
+
+    else if input_int == 3 {
+        return;
+    }
 }

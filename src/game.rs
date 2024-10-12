@@ -2,15 +2,40 @@ use whoami::fallible::realname;
 
 use std::cmp;
 use std::fmt;
-use std::io::Write;
+use std::io::{Write, Read};
 use std::thread::sleep;
 use std::time::Duration;
 use std::{io, u8};
+use std::fs::File;
 
 use rand::seq::SliceRandom;
 use rand::thread_rng;
+use bincode::{serialize, deserialize, Error};
+
+use serde::{Serialize, Deserialize};
+
+fn save(player: &Player) -> Result<(), Error> {
+    // Serialize player to a binary format
+    let encoded: Vec<u8> = serialize(player)?;
+
+    // Write binary data to a file
+    let mut file = File::create("save.blackjack")?;
+    file.write_all(&encoded)?;
+
+    Ok(())
+}
+
+fn load() -> Result<Player, Box<dyn std::error::Error>> {
+    let mut file = File::open("save.blackjack")?;
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer)?;
+    
+    let player: Player = deserialize(&buffer)?;
+    Ok(player)
+}
 
 /// Player struct
+#[derive(Serialize, Deserialize)]
 struct Player {
     name: String,
     wealth: u32,
@@ -162,10 +187,50 @@ pub fn new_game() {
         wealth: 10,
     };
 
-    println!("Created new save as {}", player.name);
+    // Create new save file
+    match save(&player) {
+        Ok(_) => { println!("Created new save as {}", player.name); },
+        Err(_) => { 
+            println!("An error occurred when saving");
+            return;
+        }
+    };
 
     // Start new game loop
     game(&mut player);
+
+    // Save player to the file again after loop ends
+    match save(&player) {
+        Ok(_) => { println!("Saved"); },
+            Err(_) => { 
+                println!("An error occurred when saving");
+                return;
+            }
+    };
+}
+
+pub fn load_game() {
+
+    // Get player object from file
+    let mut player = match load() {
+        Ok(player) => player,
+        Err(_) => {
+            println!("Save file is corrupted or doesn't exist. Make sure the save file and the app are in the same file");
+            return;
+        } 
+    };
+
+    // Start game loop
+    game(&mut player);
+
+    // Save player to the file again after loop ends
+    match save(&player) {
+        Ok(_) => { println!("Saved"); },
+            Err(_) => { 
+                println!("An error occurred when saving");
+                return;
+            }
+    };
 }
 
 /// Main game loop
@@ -175,6 +240,14 @@ fn game(player: &mut Player) {
     shuffle_deck(&mut deck);
 
     while player.wealth > 0 && player.wealth < u32::MAX {
+        match save(&player) {
+            Ok(_) => { println!("Saved"); },
+            Err(_) => { 
+                println!("An error occurred when saving");
+                return;
+            }
+        };
+
         println!("\n---");
         println!("You have {}$", player.wealth);
         println!("Place your bet");
