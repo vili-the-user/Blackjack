@@ -276,7 +276,7 @@ fn game(player: &mut Player) {
         println!("You are betting ${bet}");
 
         // Remove bet from player's wealth
-        player.wealth -= bet;
+        player.wealth = cmp::max(0, cmp::min(u32::MAX, player.wealth - bet));
 
         // Shuffle deck if less than half of cards are left
         if deck.len() < 26 {
@@ -371,6 +371,8 @@ fn game(player: &mut Player) {
             } else if input_int == 3 {
 
                 // Double down allows player to only hit once with double the bet
+                // Reduce bet again from player's wealth to compensate for doubled bet
+                player.wealth = cmp::max(0, cmp::min(u32::MAX, player.wealth - bet));
                 bet *= 2;
 
                 deal_cards(&mut player_hand, &mut deck, 1);
