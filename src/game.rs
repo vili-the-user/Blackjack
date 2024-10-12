@@ -213,9 +213,9 @@ pub fn load_game() {
 
     // Get player object from file
     let mut player = match load() {
-        Ok(player) => player,
+        Ok(player) => { println!("Loaded save file created by {}", player.name); player },
         Err(_) => {
-            println!("Save file is corrupted or doesn't exist. Make sure the save file and the app are in the same file");
+            println!("Save file is corrupted or doesn't exist. Make sure the save file and the app are in the same location");
             return;
         } 
     };
@@ -226,10 +226,10 @@ pub fn load_game() {
     // Save player to the file again after loop ends
     match save(&player) {
         Ok(_) => { println!("Saved"); },
-            Err(_) => { 
-                println!("An error occurred when saving");
-                return;
-            }
+        Err(_) => { 
+            println!("An error occurred when saving");
+            return;
+        }
     };
 }
 
