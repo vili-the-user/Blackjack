@@ -40,15 +40,18 @@ fn menu() {
         let mut input = String::new();
         io::stdin().read_line(&mut input).expect("Failed to read line");
     
+        // Check if input is valid
         input_int = match input.trim().parse() {
             Ok(num) => num,
             Err(_) => {
                 println!("Input a number between 1 and 3");
+                sleep(Duration::from_secs(1));
                 continue;
             }
         };
         if input_int > 3 {
             println!("Input a number between 1 and 3");
+            sleep(Duration::from_secs(1));
             continue;
         }
 
