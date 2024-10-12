@@ -1,7 +1,7 @@
 use whoami::fallible::realname;
 
 use std::fmt;
-
+use std::cmp;
 use std::io::Write;
 use std::{io, u8};
 use std::thread::sleep;
@@ -178,7 +178,7 @@ fn game(player: &mut Player) {
     let mut deck = create_deck_vec();
     shuffle_deck(&mut deck);
 
-    loop {
+    while player.wealth > 0 && player.wealth < u32::MAX {
         println!("\n---");
         println!("You have {}$", player.wealth);
         println!("Place your bet");
@@ -223,7 +223,7 @@ fn game(player: &mut Player) {
 
         // If both player and dealer get blackjack
         if cards_value(&player_hand) == 21 && cards_value(&dealer_hand) == 21 {
-            player.wealth += bet;
+            player.wealth = cmp::max(0, cmp::min(u32::MAX, player.wealth + bet));
             
             println!("\n--- DRAW ---");
             println!("You and dealer both got a blackjack. You get {bet}$ back");
@@ -233,7 +233,7 @@ fn game(player: &mut Player) {
 
         // If player gets blackjack
         if cards_value(&player_hand) == 21 {
-            player.wealth += bet * 2;
+            player.wealth = cmp::max(0, cmp::min(u32::MAX, player.wealth + bet * 2));
             
             println!("\n--- YOU WON ---");
             println!("You got a blackjack. Won {}$", bet * 2);
@@ -330,7 +330,7 @@ fn game(player: &mut Player) {
 
         // If dealer gets more than 21
         if cards_value(&dealer_hand) > 21 {
-            player.wealth += bet * 2;
+            player.wealth = cmp::max(0, cmp::min(u32::MAX, player.wealth + bet * 2));
 
             println!("\n--- YOU WON ---");
             println!("Dealer busted");
@@ -340,7 +340,7 @@ fn game(player: &mut Player) {
 
         // If player and dealer have same value
         if cards_value(&player_hand) == cards_value(&dealer_hand) {
-            player.wealth += bet;
+            player.wealth = cmp::max(0, cmp::min(u32::MAX, player.wealth + bet));
             
             println!("\n--- DRAW ---");
             println!("You and dealer got hands of same value. You get {bet}$ back");
@@ -350,7 +350,7 @@ fn game(player: &mut Player) {
 
         // If player has more value than dealer
         if cards_value(&player_hand) > cards_value(&dealer_hand) {
-            player.wealth += bet * 2;
+            player.wealth = cmp::max(0, cmp::min(u32::MAX, player.wealth + bet * 2));
             
             println!("\n--- YOU WON ---");
             println!("You were closer to 21. You won {}$", bet * 2);
@@ -365,5 +365,13 @@ fn game(player: &mut Player) {
 
             continue;
         }
+    }
+
+    if player.wealth == 0 {
+        println!("You ran out of money. Returning to main menu...");
+    }
+
+    if player.wealth == u32::MAX {
+        println!("You have too much money. The casino can't provide for further wins. Returning to main menu...");
     }
 }

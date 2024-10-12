@@ -6,7 +6,7 @@ use std::time::Duration;
 
 mod game;
 
-fn main() {
+fn main() -> io::Result<()> {
     // Create new big font for the intro
     let title = "Blackjack";
     let font = FIGfont::standard().unwrap();
@@ -21,6 +21,8 @@ fn main() {
     sleep(Duration::from_secs(1));
 
     menu();
+
+    Ok(())
 }
 
 /// Main menu of the game
