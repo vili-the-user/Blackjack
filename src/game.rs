@@ -270,12 +270,16 @@ fn game(player: &mut Player) {
             Err(_) => {
                 println!("Input a whole number greater than 0");
                 sleep(Duration::from_secs(1));
+                print!("\x1B[A\r\x1B[K");
+                io::stdout().flush().unwrap();
                 continue;
             }
         };
         if bet > player.wealth {
             println!("You don't have that much money");
             sleep(Duration::from_secs(1));
+            print!("\x1B[A\r\x1B[K");
+            io::stdout().flush().unwrap();
             continue;
         }
 
@@ -353,6 +357,7 @@ fn game(player: &mut Player) {
 
                 // Clear input to prevent bugs
                 print!("\x1B[A\r\x1B[K");
+                io::stdout().flush().unwrap();
 
                 // Check if input is valid
                 input_int = match input.trim().parse() {
@@ -360,24 +365,31 @@ fn game(player: &mut Player) {
                     Err(_) => {
                         println!("Input a number between 1 and 3");
                         sleep(Duration::from_secs(1));
+                        print!("\x1B[A\r\x1B[K");
+                        io::stdout().flush().unwrap();
                         continue;
                     }
                 };
                 if input_int > 3 {
                     println!("Input a number between 1 and 3");
                     sleep(Duration::from_secs(1));
+                    print!("\x1B[A\r\x1B[K");
+                    io::stdout().flush().unwrap();
                     continue;
                 }
-                if input_int == 3 {
-                
-                    if player.wealth < bet {
-                        println!("You don't have enough money to double down");
-                        sleep(Duration::from_secs(1));
-                        continue;
-                    }
-                    else if index > 1 {
+                if input_int == 3 {            
+                    if index > 1 {
                         println!("You can't double down after hitting");
                         sleep(Duration::from_secs(1));
+                        print!("\x1B[A\r\x1B[K");
+                        io::stdout().flush().unwrap();
+                        continue;
+                    }
+                    else if player.wealth < bet {
+                        println!("You don't have enough money to double down");
+                        sleep(Duration::from_secs(1));
+                        print!("\x1B[A\r\x1B[K");
+                        io::stdout().flush().unwrap();
                         continue;
                     }
                 }
