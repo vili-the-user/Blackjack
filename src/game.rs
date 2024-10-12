@@ -1,25 +1,25 @@
 use whoami::fallible::realname;
 
-use std::fmt;
 use std::cmp;
+use std::fmt;
 use std::io::Write;
-use std::{io, u8};
 use std::thread::sleep;
 use std::time::Duration;
+use std::{io, u8};
 
-use rand::thread_rng;
 use rand::seq::SliceRandom;
+use rand::thread_rng;
 
 /// Player struct
 struct Player {
     name: String,
-    wealth: u32
+    wealth: u32,
 }
 
 /// Card struct
 struct Card {
     num_str: String,
-    icon: char
+    icon: char,
 }
 
 impl fmt::Debug for Card {
@@ -36,25 +36,25 @@ impl fmt::Display for Card {
 
 // Create constant arrays for card icons and numbers
 const ICON_ARRAY: [char; 4] = ['♠', '♣', '♥', '♦'];
-const NUM_ARRAY: [&str; 13] = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
+const NUM_ARRAY: [&str; 13] = [
+    "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A",
+];
 
 /// Creates a sorted list of cards
-/// 
+///
 /// # Returns
-/// 
+///
 /// Vec of Card objects
 fn create_deck_vec() -> Vec<Card> {
-
     // Create new deck vector
     let mut deck_vec: Vec<Card> = Vec::new();
 
     // Add one card of each type to the vector
     for icon in ICON_ARRAY {
         for num in NUM_ARRAY {
-
             deck_vec.push(Card {
                 num_str: String::from(num),
-                icon: icon
+                icon: icon,
             });
         }
     }
@@ -71,12 +71,11 @@ fn shuffle_deck(deck_vec: &mut Vec<Card>) {
 }
 
 /// Calculates the total value of a vec of cards
-/// 
+///
 /// # Returns
-/// 
+///
 /// u8
 fn cards_value(hand_vec: &Vec<Card>) -> u8 {
-
     // Create variables for sum of card values and amount of aces
     let mut total: u8 = 0;
     let mut aces_amt: u8 = 0;
@@ -89,7 +88,6 @@ fn cards_value(hand_vec: &Vec<Card>) -> u8 {
         } else if ["10", "J", "Q", "K"].contains(&card.num_str.as_str()) {
             total += 10;
         } else {
-
             // Parse integer from card num string
             let value: u8 = match card.num_str.parse() {
                 Ok(num) => num,
@@ -118,7 +116,7 @@ fn deal_cards(to_vec: &mut Vec<Card>, from_vec: &mut Vec<Card>, amt_cards: u8) {
         // Pop the card from the deck
         match from_vec.pop() {
             Some(card_popped) => card = card_popped,
-            None                  => {
+            None => {
                 panic!("Deck empty, cannot deal cards");
             }
         };
@@ -147,7 +145,6 @@ fn print_game_state(player_hand: &Vec<Card>, dealer_hand: &Vec<Card>, dealer_tur
 
 /// Starts a game with new stats
 pub fn new_game() {
-
     // Create user name variable
     let user_name: String;
 
@@ -162,7 +159,7 @@ pub fn new_game() {
     // Create new player with the user name
     let mut player: Player = Player {
         name: String::from(user_name),
-        wealth: 10
+        wealth: 10,
     };
 
     println!("Created new save as {}", player.name);
@@ -173,7 +170,6 @@ pub fn new_game() {
 
 /// Main game loop
 fn game(player: &mut Player) {
-
     // Create new deck and shuffle it
     let mut deck = create_deck_vec();
     shuffle_deck(&mut deck);
@@ -185,7 +181,9 @@ fn game(player: &mut Player) {
 
         // Get user input
         let mut input = String::new();
-        io::stdin().read_line(&mut input).expect("Failed to read line");
+        io::stdin()
+            .read_line(&mut input)
+            .expect("Failed to read line");
 
         // Check if input is valid
         let bet: u32 = match input.trim().parse() {
@@ -224,7 +222,7 @@ fn game(player: &mut Player) {
         // If both player and dealer get blackjack
         if cards_value(&player_hand) == 21 && cards_value(&dealer_hand) == 21 {
             player.wealth = cmp::max(0, cmp::min(u32::MAX, player.wealth + bet));
-            
+
             println!("\n--- DRAW ---");
             println!("You and dealer both got a blackjack. You get {bet}$ back");
 
@@ -234,7 +232,7 @@ fn game(player: &mut Player) {
         // If player gets blackjack
         if cards_value(&player_hand) == 21 {
             player.wealth = cmp::max(0, cmp::min(u32::MAX, player.wealth + bet * 2));
-            
+
             println!("\n--- YOU WON ---");
             println!("You got a blackjack. Won {}$", bet * 2);
 
@@ -242,7 +240,7 @@ fn game(player: &mut Player) {
         }
 
         // If dealer gets blackjack
-        if cards_value(&dealer_hand) == 21 {            
+        if cards_value(&dealer_hand) == 21 {
             println!("\n--- YOU LOST ---");
             println!("Dealer got a blackjack");
 
@@ -255,7 +253,7 @@ fn game(player: &mut Player) {
         println!("What do you want to do?");
         println!("1. Hit");
         println!("2. Stand");
-        
+
         // Print current game state
         print_game_state(&player_hand, &dealer_hand, false);
         while cards_value(&player_hand) <= 21 {
@@ -265,7 +263,9 @@ fn game(player: &mut Player) {
             loop {
                 // Get user input
                 let mut input = String::new();
-                io::stdin().read_line(&mut input).expect("Failed to read line");
+                io::stdin()
+                    .read_line(&mut input)
+                    .expect("Failed to read line");
 
                 // Clear input to prevent bugs
                 print!("\x1B[A\r\x1B[K");
@@ -292,8 +292,7 @@ fn game(player: &mut Player) {
 
                 // Print game state
                 print_game_state(&player_hand, &dealer_hand, false);
-            }
-            else if input_int == 2 {
+            } else if input_int == 2 {
                 break;
             }
         }
@@ -313,11 +312,12 @@ fn game(player: &mut Player) {
         // Print current game state
         print_game_state(&player_hand, &dealer_hand, true);
         while cards_value(&dealer_hand) <= 21 {
-
             sleep(Duration::from_secs(1));
 
             // Dealer stands on 17 or greater
-            if cards_value(&dealer_hand) < 17 && cards_value(&dealer_hand) <= cards_value(&player_hand) {
+            if cards_value(&dealer_hand) < 17
+                && cards_value(&dealer_hand) <= cards_value(&player_hand)
+            {
                 deal_cards(&mut dealer_hand, &mut deck, 1);
                 // Print game state
                 print_game_state(&player_hand, &dealer_hand, true);
@@ -341,7 +341,7 @@ fn game(player: &mut Player) {
         // If player and dealer have same value
         if cards_value(&player_hand) == cards_value(&dealer_hand) {
             player.wealth = cmp::max(0, cmp::min(u32::MAX, player.wealth + bet));
-            
+
             println!("\n--- DRAW ---");
             println!("You and dealer got hands of same value. You get {bet}$ back");
 
@@ -351,7 +351,7 @@ fn game(player: &mut Player) {
         // If player has more value than dealer
         if cards_value(&player_hand) > cards_value(&dealer_hand) {
             player.wealth = cmp::max(0, cmp::min(u32::MAX, player.wealth + bet * 2));
-            
+
             println!("\n--- YOU WON ---");
             println!("You were closer to 21. You won {}$", bet * 2);
 
