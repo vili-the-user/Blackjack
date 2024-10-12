@@ -1,6 +1,6 @@
 use whoami::fallible::realname;
 
-use std::io;
+use std::{io, u8};
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -15,7 +15,7 @@ struct Player {
 
 /// Card struct
 struct Card {
-    num: String,
+    num_str: String,
     icon: char
 }
 
@@ -38,7 +38,7 @@ fn create_deck_vec() -> Vec<Card> {
         for num in NUM_ARRAY {
 
             deck_vec.push(Card {
-                num: String::from(num),
+                num_str: String::from(num),
                 icon: icon
             });
         }
@@ -50,6 +50,45 @@ fn create_deck_vec() -> Vec<Card> {
 /// Shuffles passed deck of cards
 fn shuffle_deck(deck_vec: &mut Vec<Card>) {
     deck_vec.shuffle(&mut thread_rng());
+}
+
+/// Calculates the total value of a vec of cards
+/// 
+/// # Returns
+/// 
+/// u8
+fn cards_value(hand_vec: Vec<Card>) -> u8 {
+
+    // Create variables for sum of card values and amount of aces
+    let mut total: u8 = 0;
+    let mut aces_amt: u8 = 0;
+
+    // Go through each card in the hand and add up their values
+    for card in hand_vec {
+        if card.num_str == "A" {
+            total += 11;
+            aces_amt += 1;
+        } else if ["10", "J", "Q", "K"].contains(&card.num_str.as_str()) {
+            total += 10;
+        } else {
+
+            // Parse integer from card num string
+            let value: u8 = match card.num_str.parse() {
+                Ok(num) => num,
+                Err(_) => {
+                    continue;
+                }
+            };
+            total += value;
+        }
+    }
+    // If there are aces in the hand and the total value exceeds 21, the aces' value changes from 11 to 1
+    while total > 21 && aces_amt > 0 {
+        total -= 10;
+        aces_amt -= 1;
+    }
+
+    return total;
 }
 
 /// Starts a game with new stats
