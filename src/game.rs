@@ -159,10 +159,10 @@ fn print_game_state(player_hand: &Vec<Card>, dealer_hand: &Vec<Card>, dealer_tur
     let dealer_hand_value: u8 = cards_value(&dealer_hand);
 
     if dealer_turn {
-        print!("\r\x1B[5A\x1B[KYour cards: {:?} ({player_hand_value})\tDealer's cards: {:?} ({dealer_hand_value})\r\x1B[5B", player_hand, dealer_hand);
+        print!("\r\x1B[6A\x1B[KYour cards: {:?} ({player_hand_value})\tDealer's cards: {:?} ({dealer_hand_value})\r\x1B[6B", player_hand, dealer_hand);
         io::stdout().flush().unwrap();
     } else {
-        print!("\r\x1B[5A\x1B[KYour cards: {:?} ({player_hand_value})\tDealer's cards: [{}, ??] (??)\x1B[5B\r", player_hand, dealer_hand[0]);
+        print!("\r\x1B[6A\x1B[KYour cards: {:?} ({player_hand_value})\tDealer's cards: [{}, ??] (??)\x1B[6B\r", player_hand, dealer_hand[0]);
         io::stdout().flush().unwrap();
     }
     sleep(Duration::from_secs(1));
@@ -249,7 +249,7 @@ fn game(player: &mut Player) {
         };
 
         println!("\n---");
-        println!("You have {}$", player.wealth);
+        println!("You have ${}", player.wealth);
         println!("Place your bet");
 
         // Get user input
@@ -259,7 +259,7 @@ fn game(player: &mut Player) {
             .expect("Failed to read line");
 
         // Check if input is valid
-        let bet: u32 = match input.trim().parse() {
+        let mut bet: u32 = match input.trim().parse() {
             Ok(num) => num,
             Err(_) => {
                 println!("Input a whole number greater than 0");
@@ -273,7 +273,7 @@ fn game(player: &mut Player) {
             continue;
         }
 
-        println!("You are betting {bet}$");
+        println!("You are betting ${bet}");
 
         // Remove bet from player's wealth
         player.wealth -= bet;
@@ -321,11 +321,12 @@ fn game(player: &mut Player) {
         }
 
         // Player's turn
-        println!("\n--- YOUR TURN | BET: {bet}$ ---");
+        println!("\n--- YOUR TURN | BET: ${bet} ---");
         println!("\n---");
         println!("What do you want to do?");
         println!("1. Hit");
         println!("2. Stand");
+        println!("3. Double down");
 
         // Print current game state
         print_game_state(&player_hand, &dealer_hand, false);
@@ -347,13 +348,13 @@ fn game(player: &mut Player) {
                 input_int = match input.trim().parse() {
                     Ok(num) => num,
                     Err(_) => {
-                        println!("Input a number between 1 and 2");
+                        println!("Input a number between 1 and 3");
                         sleep(Duration::from_secs(1));
                         continue;
                     }
                 };
-                if input_int > 2 {
-                    println!("Input a number between 1 and 2");
+                if input_int > 3 {
+                    println!("Input a number between 1 and 3");
                     sleep(Duration::from_secs(1));
                     continue;
                 }
@@ -367,6 +368,17 @@ fn game(player: &mut Player) {
                 print_game_state(&player_hand, &dealer_hand, false);
             } else if input_int == 2 {
                 break;
+            } else if input_int == 3 {
+
+                // Double down allows player to only hit once with double the bet
+                bet *= 2;
+
+                deal_cards(&mut player_hand, &mut deck, 1);
+
+                // Print game state
+                print_game_state(&player_hand, &dealer_hand, false);
+
+                break;
             }
         }
 
@@ -379,7 +391,7 @@ fn game(player: &mut Player) {
         }
 
         // Dealer's turn
-        print!("\r\x1B[6A\x1B[K--- DEALER'S TURN | BET: {bet}$ ---\x1B[6B");
+        print!("\r\x1B[7A\x1B[K--- DEALER'S TURN | BET: ${bet} ---\x1B[7B");
         io::stdout().flush().unwrap();
 
         // Print current game state
@@ -406,7 +418,7 @@ fn game(player: &mut Player) {
             player.wealth = cmp::max(0, cmp::min(u32::MAX, player.wealth + bet * 2));
 
             println!("\n--- YOU WON ---");
-            println!("Dealer busted");
+            println!("Dealer busted. You won ${}", bet * 2);
 
             continue;
         }
@@ -416,7 +428,7 @@ fn game(player: &mut Player) {
             player.wealth = cmp::max(0, cmp::min(u32::MAX, player.wealth + bet));
 
             println!("\n--- DRAW ---");
-            println!("You and dealer got hands of same value. You get {bet}$ back");
+            println!("You and dealer got hands of same value. You get ${bet} back");
 
             continue;
         }
@@ -426,7 +438,7 @@ fn game(player: &mut Player) {
             player.wealth = cmp::max(0, cmp::min(u32::MAX, player.wealth + bet * 2));
 
             println!("\n--- YOU WON ---");
-            println!("You were closer to 21. You won {}$", bet * 2);
+            println!("You were closer to 21. You won ${}", bet * 2);
 
             continue;
         }
