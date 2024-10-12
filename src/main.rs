@@ -31,7 +31,7 @@ fn menu() {
 
     loop {
         println!("---");
-        println!("What do you want to do?");
+        println!("Main menu");
         println!("1. New game");
         println!("2. Continue");
         println!("3. Exit");
