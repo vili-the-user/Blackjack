@@ -2,6 +2,7 @@ use whoami::fallible::realname;
 
 use std::fmt;
 
+use std::io::Write;
 use std::{io, u8};
 use std::thread::sleep;
 use std::time::Duration;
@@ -118,8 +119,7 @@ fn deal_cards(to_vec: &mut Vec<Card>, from_vec: &mut Vec<Card>, amt_cards: u8) {
         match from_vec.pop() {
             Some(card_popped) => card = card_popped,
             None                  => {
-                println!("Deck empty, cannot deal cards");
-                return;
+                panic!("Deck empty, cannot deal cards");
             }
         };
 
@@ -130,15 +130,17 @@ fn deal_cards(to_vec: &mut Vec<Card>, from_vec: &mut Vec<Card>, amt_cards: u8) {
 }
 
 /// Prints the current hands and bet
-fn print_game_state(player_hand: &Vec<Card>, dealer_hand: &Vec<Card>, bet: u32, show_dealer_hand: bool) {
+fn print_game_state(player_hand: &Vec<Card>, dealer_hand: &Vec<Card>, dealer_turn: bool) {
     // Calculate total values for both player's and dealer's hands
     let player_hand_value: u8 = cards_value(&player_hand);
     let dealer_hand_value: u8 = cards_value(&dealer_hand);
 
-    if show_dealer_hand {
-        print!("Your cards: {:?} ({player_hand_value})\tDealer's cards: {:?} ({dealer_hand_value})\n", player_hand, dealer_hand);
+    if dealer_turn {
+        print!("\r\x1B[5A\x1B[KYour cards: {:?} ({player_hand_value})\tDealer's cards: {:?} ({dealer_hand_value})\r\x1B[5B", player_hand, dealer_hand);
+        io::stdout().flush().unwrap();
     } else {
-        print!("Your cards: {:?} ({player_hand_value})\tDealer's cards: [{}, ??] (??)\n", player_hand, dealer_hand[0]);
+        print!("\r\x1B[5A\x1B[KYour cards: {:?} ({player_hand_value})\tDealer's cards: [{}, ??] (??)\x1B[5B\r", player_hand, dealer_hand[0]);
+        io::stdout().flush().unwrap();
     }
     sleep(Duration::from_secs(1));
 }
@@ -172,11 +174,12 @@ pub fn new_game() {
 /// Main game loop
 fn game(player: &mut Player) {
 
-    // Create new deck
+    // Create new deck and shuffle it
     let mut deck = create_deck_vec();
+    shuffle_deck(&mut deck);
 
     loop {
-        println!("---");
+        println!("\n---");
         println!("You have {}$", player.wealth);
         println!("Place your bet");
 
@@ -204,8 +207,11 @@ fn game(player: &mut Player) {
         // Remove bet from player's wealth
         player.wealth -= bet;
 
-        // Shuffle deck
-        shuffle_deck(&mut deck);
+        // Shuffle deck if less than half of cards are left
+        if deck.len() < 26 {
+            deck = create_deck_vec();
+            shuffle_deck(&mut deck);
+        }
 
         // Create empty hand vec for player and dealer
         let mut player_hand: Vec<Card> = Vec::new();
@@ -219,9 +225,8 @@ fn game(player: &mut Player) {
         if cards_value(&player_hand) == 21 && cards_value(&dealer_hand) == 21 {
             player.wealth += bet;
             
-            println!("--- DRAW ---");
+            println!("\n--- DRAW ---");
             println!("You and dealer both got a blackjack. You get {bet}$ back");
-            print_game_state(&player_hand, &dealer_hand, bet, true);
 
             continue;
         }
@@ -230,33 +235,30 @@ fn game(player: &mut Player) {
         if cards_value(&player_hand) == 21 {
             player.wealth += bet * 2;
             
-            println!("--- YOU WON ---");
+            println!("\n--- YOU WON ---");
             println!("You got a blackjack. Won {}$", bet * 2);
-            print_game_state(&player_hand, &dealer_hand, bet, true);
 
             continue;
         }
 
         // If dealer gets blackjack
-        if cards_value(&player_hand) == 21 {            
-            println!("--- YOU LOST ---");
+        if cards_value(&dealer_hand) == 21 {            
+            println!("\n--- YOU LOST ---");
             println!("Dealer got a blackjack");
-            print_game_state(&player_hand, &dealer_hand, bet, true);
 
             continue;
         }
 
         // Player's turn
+        println!("\n--- YOUR TURN | BET: {bet}$ ---");
+        println!("\n---");
+        println!("What do you want to do?");
+        println!("1. Hit");
+        println!("2. Stand");
+        
+        // Print current game state
+        print_game_state(&player_hand, &dealer_hand, false);
         while cards_value(&player_hand) <= 21 {
-            // Print current game state
-            println!("--- BET: {bet}$ ---");
-            print_game_state(&player_hand, &dealer_hand, bet, false);
-
-            println!("---");
-            println!("What do you want to do?");
-            println!("1. Hit");
-            println!("2. Stand");
-
             // Create variable for user input integer
             let mut input_int: u8;
 
@@ -264,6 +266,9 @@ fn game(player: &mut Player) {
                 // Get user input
                 let mut input = String::new();
                 io::stdin().read_line(&mut input).expect("Failed to read line");
+
+                // Clear input to prevent bugs
+                print!("\x1B[A\r\x1B[K");
 
                 // Check if input is valid
                 input_int = match input.trim().parse() {
@@ -284,6 +289,9 @@ fn game(player: &mut Player) {
 
             if input_int == 1 {
                 deal_cards(&mut player_hand, &mut deck, 1);
+
+                // Print game state
+                print_game_state(&player_hand, &dealer_hand, false);
             }
             else if input_int == 2 {
                 break;
@@ -292,30 +300,29 @@ fn game(player: &mut Player) {
 
         // If player gets more than 21
         if cards_value(&player_hand) > 21 {
-            println!("--- YOU LOST ---");
-            println!("Your cards went over 21");
-            print_game_state(&player_hand, &dealer_hand, bet, true);
+            println!("\n--- YOU LOST ---");
+            println!("You busted");
 
             continue;
         }
 
         // Dealer's turn
-        while cards_value(&dealer_hand) <= 21 {
-            // Print current game state
-            println!("--- BET: {bet}$ ---");
-            print_game_state(&player_hand, &dealer_hand, bet, true);
+        print!("\r\x1B[6A\x1B[K--- DEALER'S TURN | BET: {bet}$ ---\x1B[6B");
+        io::stdout().flush().unwrap();
 
-            println!("---");
-            println!("Dealer's turn:");
+        // Print current game state
+        print_game_state(&player_hand, &dealer_hand, true);
+        while cards_value(&dealer_hand) <= 21 {
+
             sleep(Duration::from_secs(1));
 
             // Dealer stands on 17 or greater
-            if cards_value(&dealer_hand) < 17 {
+            if cards_value(&dealer_hand) < 17 && cards_value(&dealer_hand) <= cards_value(&player_hand) {
                 deal_cards(&mut dealer_hand, &mut deck, 1);
-                println!("Hit");
+                // Print game state
+                print_game_state(&player_hand, &dealer_hand, true);
                 sleep(Duration::from_secs(1));
             } else {
-                println!("Stand");
                 sleep(Duration::from_secs(1));
                 break;
             }
@@ -325,9 +332,8 @@ fn game(player: &mut Player) {
         if cards_value(&dealer_hand) > 21 {
             player.wealth += bet * 2;
 
-            println!("--- YOU WON ---");
-            println!("Dealer's cards went over 21");
-            print_game_state(&player_hand, &dealer_hand, bet, true);
+            println!("\n--- YOU WON ---");
+            println!("Dealer busted");
 
             continue;
         }
@@ -336,9 +342,8 @@ fn game(player: &mut Player) {
         if cards_value(&player_hand) == cards_value(&dealer_hand) {
             player.wealth += bet;
             
-            println!("--- DRAW ---");
+            println!("\n--- DRAW ---");
             println!("You and dealer got hands of same value. You get {bet}$ back");
-            print_game_state(&player_hand, &dealer_hand, bet, true);
 
             continue;
         }
@@ -347,18 +352,16 @@ fn game(player: &mut Player) {
         if cards_value(&player_hand) > cards_value(&dealer_hand) {
             player.wealth += bet * 2;
             
-            println!("--- YOU WON ---");
+            println!("\n--- YOU WON ---");
             println!("You were closer to 21. You won {}$", bet * 2);
-            print_game_state(&player_hand, &dealer_hand, bet, true);
 
             continue;
         }
 
         // If dealer has more value than player
         if cards_value(&player_hand) < cards_value(&dealer_hand) {
-            println!("--- YOU LOST ---");
+            println!("\n--- YOU LOST ---");
             println!("Dealer was closer to 21.");
-            print_game_state(&player_hand, &dealer_hand, bet, true);
 
             continue;
         }
