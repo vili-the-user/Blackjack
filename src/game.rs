@@ -1,4 +1,3 @@
-use rand::seq::index;
 use whoami::fallible::realname;
 
 use std::cmp;
@@ -337,14 +336,15 @@ fn game(player: &mut Player) {
 
         // Print current game state
         print_game_state(&player_hand, &dealer_hand, false);
+        let mut index: u8 = 0;
         while cards_value(&player_hand) <= 21 {
             // Create variable for user input integer
             let mut input_int: u8;
 
-            let mut index: u8 = 0;
-            loop {
-                index += 1;
+            // Add to index
+            index += 1;
 
+            loop {
                 // Get user input
                 let mut input = String::new();
                 io::stdin()
