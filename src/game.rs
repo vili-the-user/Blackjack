@@ -1,3 +1,4 @@
+use rand::seq::index;
 use whoami::fallible::realname;
 
 use std::cmp;
@@ -38,7 +39,7 @@ fn load() -> Result<Player, Box<dyn std::error::Error>> {
 #[derive(Serialize, Deserialize)]
 struct Player {
     name: String,
-    wealth: u32,
+    wealth: u32
 }
 
 /// Card struct
@@ -196,6 +197,9 @@ pub fn new_game() {
         }
     };
 
+    // Clear terminal
+    print!("\x1B[2J\x1B[1;1H");
+
     // Start new game loop
     game(&mut player);
 
@@ -219,6 +223,9 @@ pub fn load_game() {
             return;
         } 
     };
+
+    // Clear terminal
+    print!("\x1B[2J\x1B[1;1H");
 
     // Start game loop
     game(&mut player);
@@ -334,7 +341,10 @@ fn game(player: &mut Player) {
             // Create variable for user input integer
             let mut input_int: u8;
 
+            let mut index: u8 = 0;
             loop {
+                index += 1;
+
                 // Get user input
                 let mut input = String::new();
                 io::stdin()
@@ -358,6 +368,19 @@ fn game(player: &mut Player) {
                     sleep(Duration::from_secs(1));
                     continue;
                 }
+                if input_int == 3 {
+                
+                    if player.wealth < bet {
+                        println!("You don't have enough money to double down");
+                        sleep(Duration::from_secs(1));
+                        continue;
+                    }
+                    else if index > 1 {
+                        println!("You can't double down after hitting");
+                        sleep(Duration::from_secs(1));
+                        continue;
+                    }
+                }
                 break;
             }
 
@@ -369,7 +392,6 @@ fn game(player: &mut Player) {
             } else if input_int == 2 {
                 break;
             } else if input_int == 3 {
-
                 // Double down allows player to only hit once with double the bet
                 // Reduce bet again from player's wealth to compensate for doubled bet
                 player.wealth = cmp::max(0, cmp::min(u32::MAX, player.wealth - bet));
