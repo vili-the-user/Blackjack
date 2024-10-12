@@ -442,9 +442,11 @@ fn game(player: &mut Player) {
 
     if player.wealth == 0 {
         println!("You ran out of money. Returning to main menu...");
+        sleep(Duration::from_secs(2));
     }
 
     if player.wealth == u32::MAX {
         println!("You have too much money. The casino can't provide for further wins. Returning to main menu...");
+        sleep(Duration::from_secs(2));
     }
 }
