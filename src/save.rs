@@ -55,5 +55,5 @@ pub fn load() -> Result<Player, String> {
 #[derive(Serialize, Deserialize)]
 pub struct Player {
     pub name: String,
-    pub wealth: u32
+    pub wealth: u16
 }

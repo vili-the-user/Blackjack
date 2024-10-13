@@ -1,6 +1,5 @@
 use whoami::fallible::realname;
 
-use std::cmp;
 use std::io::Write;
 use std::thread::sleep;
 use std::time::Duration;
@@ -184,7 +183,7 @@ pub fn new_game() {
 
     // Save player to the file again after loop ends
     match save(&player) {
-        Ok(_) => { println!("Saved"); },
+        Ok(_) => { notification("Saved", 1); },
             Err(_) => { 
                 notification("An error occurred when saving", 2);
 
@@ -220,7 +219,7 @@ pub fn load_game() {
 
     // Save player to the file again after loop ends
     match save(&player) {
-        Ok(_) => { println!("Saved"); },
+        Ok(_) => { notification("Saved", 1); },
         Err(_) => { 
             notification("An error occurred when saving", 2);
             return;
@@ -234,9 +233,9 @@ fn game(player: &mut Player) -> Result<(), String> {
     let mut deck = create_deck_vec();
     shuffle_deck(&mut deck);
 
-    while player.wealth > 0 && player.wealth < u32::MAX {
+    while player.wealth > 0 && player.wealth < u16::MAX {
         match save(&player) {
-            Ok(_) => { println!("Saved"); },
+            Ok(_) => { notification("Saved", 1); },
             Err(_) => { 
                 return Err(String::from("An error occurred while saving. Returning to main menu..."));
             }
@@ -253,7 +252,7 @@ fn game(player: &mut Player) -> Result<(), String> {
             .expect("Failed to read line");
 
         // Check if input is valid
-        let mut bet: u32 = match input.trim().parse() {
+        let mut bet: u16 = match input.trim().parse() {
             Ok(num) => num,
             Err(_) => {
                 notification("Input a whole number greater than 0", 1);
@@ -269,7 +268,7 @@ fn game(player: &mut Player) -> Result<(), String> {
         println!("You are betting ${bet}");
 
         // Remove bet from player's wealth
-        player.wealth = cmp::max(0, cmp::min(u32::MAX, player.wealth - bet));
+        player.wealth = player.wealth.saturating_sub(bet);
 
         // Shuffle deck if less than half of cards are left
         if deck.len() < 26 {
@@ -297,7 +296,7 @@ fn game(player: &mut Player) -> Result<(), String> {
 
         // If both player and dealer get blackjack
         if cards_value(&player_hand) == 21 && cards_value(&dealer_hand) == 21 {
-            player.wealth = cmp::max(0, cmp::min(u32::MAX, player.wealth + bet));
+            player.wealth = player.wealth.saturating_add(bet);
 
             print_game_state(&player_hand, &dealer_hand, true);
 
@@ -309,7 +308,7 @@ fn game(player: &mut Player) -> Result<(), String> {
 
         // If player gets blackjack
         if cards_value(&player_hand) == 21 {
-            player.wealth = cmp::max(0, cmp::min(u32::MAX, player.wealth + bet * 2));
+            player.wealth = player.wealth.saturating_add(bet * 2);
 
             print_game_state(&player_hand, &dealer_hand, true);
 
@@ -329,7 +328,7 @@ fn game(player: &mut Player) -> Result<(), String> {
             continue;
         }
 
-        // Player turn
+        // Player's turn
         let mut index: u8 = 0;
         while cards_value(&player_hand) <= 21 {
             // Create variable for user input integer
@@ -388,7 +387,7 @@ fn game(player: &mut Player) -> Result<(), String> {
             } else if input_int == 3 {
                 // Double down allows player to only hit once with double the bet
                 // Reduce bet again from player's wealth to compensate for doubled bet
-                player.wealth = cmp::max(0, cmp::min(u32::MAX, player.wealth - bet));
+                player.wealth = player.wealth.saturating_sub(bet);
                 bet *= 2;
 
                 deal_cards(&mut player_hand, &mut deck, 1)?;
@@ -433,7 +432,7 @@ fn game(player: &mut Player) -> Result<(), String> {
 
         // If dealer gets more than 21
         if cards_value(&dealer_hand) > 21 {
-            player.wealth = cmp::max(0, cmp::min(u32::MAX, player.wealth + bet * 2));
+            player.wealth = player.wealth.saturating_add(bet * 2);
 
             println!("\n--- YOU WON ---");
             println!("Dealer busted. You won ${}", bet * 2);
@@ -443,7 +442,7 @@ fn game(player: &mut Player) -> Result<(), String> {
 
         // If player and dealer have same value
         if cards_value(&player_hand) == cards_value(&dealer_hand) {
-            player.wealth = cmp::max(0, cmp::min(u32::MAX, player.wealth + bet));
+            player.wealth = player.wealth.saturating_add(bet);
 
             println!("\n--- DRAW ---");
             println!("You and dealer got hands of same value. You get ${bet} back");
@@ -453,7 +452,7 @@ fn game(player: &mut Player) -> Result<(), String> {
 
         // If player has more value than dealer
         if cards_value(&player_hand) > cards_value(&dealer_hand) {
-            player.wealth = cmp::max(0, cmp::min(u32::MAX, player.wealth + bet * 2));
+            player.wealth = player.wealth.saturating_add(bet * 2);
 
             println!("\n--- YOU WON ---");
             println!("You were closer to 21. You won ${}", bet * 2);
@@ -476,7 +475,7 @@ fn game(player: &mut Player) -> Result<(), String> {
         sleep(Duration::from_secs(2));
     }
 
-    if player.wealth == u32::MAX {
+    if player.wealth == u16::MAX {
         println!("You have too much money. The casino can't provide for further wins. Returning to main menu...");
         sleep(Duration::from_secs(2));
     }

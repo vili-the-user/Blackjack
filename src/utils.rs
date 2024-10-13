@@ -14,4 +14,5 @@ pub fn notification(msg: &str, sec: u64) {
 /// Clears terminal completely
 pub fn clear_terminal() {
     print!("\x1B[2J\x1B[1;1H");
+    io::stdout().flush().unwrap();
 }
