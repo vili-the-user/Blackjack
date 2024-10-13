@@ -74,14 +74,14 @@ fn cards_value(hand_vec: &Vec<String>) -> u8 {
         };
 
         // Add card value to the total according to their number
-        if card == "A" {
+        if card_value == "A" {
             total += 11;
             aces_amt += 1;
-        } else if ["10", "J", "Q", "K"].contains(&card.as_str()) {
+        } else if ["10", "J", "Q", "K"].contains(&card_value.as_str()) {
             total += 10;
         } else {
             // Parse integer from card num string
-            let value: u8 = match card.parse() {
+            let value: u8 = match card_value.parse() {
                 Ok(num) => num,
                 Err(_)      => { println!("Cannot parse integer from card value because it is unknown"); continue; }
             };
@@ -159,21 +159,25 @@ pub fn new_game() {
         wealth: 10,
     };
 
+    // Clear terminal
+    print!("\x1B[2J\x1B[1;1H");
+
     // Create new save file
     match save(&player) {
         Ok(_) => { println!("Created new save as {}", player.name); },
         Err(_) => { 
-            println!("An error occurred when saving");
+            notification("An error occurred when saving", 2);
+
             return;
         }
     };
 
-    // Clear terminal
-    print!("\x1B[2J\x1B[1;1H");
-
     // Start new game loop
     match game(&mut player) {
-        Ok(_) => {},
+        Ok(_) => {
+            // Clear terminal
+            print!("\x1B[2J\x1B[1;1H");
+        },
         Err(err) => {
             println!("{err}");
             return;
@@ -184,7 +188,8 @@ pub fn new_game() {
     match save(&player) {
         Ok(_) => { println!("Saved"); },
             Err(_) => { 
-                println!("An error occurred when saving");
+                notification("An error occurred when saving", 2);
+
                 return;
             }
     };
@@ -192,23 +197,27 @@ pub fn new_game() {
 
 pub fn load_game() {
 
+    // Clear terminal
+    print!("\x1B[2J\x1B[1;1H");
+
     // Get player object from file
     let mut player = match load() {
         Ok(player) => { println!("Loaded save file created by {}", player.name); player },
         Err(err) => {
-            println!("{err}");
+            notification(&format!("{}", err), 2);
+
             return;
         } 
     };
 
-    // Clear terminal
-    print!("\x1B[2J\x1B[1;1H");
-
     // Start game loop
     match game(&mut player) {
-        Ok(_) => {},
+        Ok(_) => {
+            // Clear terminal
+            print!("\x1B[2J\x1B[1;1H");
+        },
         Err(err) => {
-            println!("{err}");
+            notification(&format!("{}", err), 2);
             return;
         }
     };
@@ -217,7 +226,7 @@ pub fn load_game() {
     match save(&player) {
         Ok(_) => { println!("Saved"); },
         Err(_) => { 
-            println!("An error occurred when saving");
+            notification("An error occurred when saving", 2);
             return;
         }
     };
@@ -288,6 +297,8 @@ fn game(player: &mut Player) -> Result<(), String> {
         println!("2. Stand");
         println!("3. Double down");
 
+        print_game_state(&player_hand, &dealer_hand, false);
+
         // If both player and dealer get blackjack
         if cards_value(&player_hand) == 21 && cards_value(&dealer_hand) == 21 {
             player.wealth = cmp::max(0, cmp::min(u32::MAX, player.wealth + bet));
@@ -322,6 +333,7 @@ fn game(player: &mut Player) -> Result<(), String> {
             continue;
         }
 
+        // Player turn
         let mut index: u8 = 0;
         while cards_value(&player_hand) <= 21 {
             // Create variable for user input integer
