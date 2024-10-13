@@ -245,24 +245,36 @@ fn game(player: &mut Player) -> Result<(), String> {
         println!("You have ${}", player.wealth);
         println!("Place your bet");
 
-        // Get user input
-        let mut input = String::new();
-        io::stdin()
-            .read_line(&mut input)
-            .expect("Failed to read line");
+        // Create variable for bet
+        let mut bet: u16;
 
-        // Check if input is valid
-        let mut bet: u16 = match input.trim().parse() {
-            Ok(num) => num,
-            Err(_) => {
-                notification("Input a whole number greater than 0", 1);
+        loop {
+            // Get user input
+            let mut input = String::new();
+            io::stdin()
+                .read_line(&mut input)
+                .expect("Failed to read line");
+
+            // Clear input to prevent bugs
+            print!("\x1B[A\r\x1B[K");
+            io::stdout().flush().unwrap();
+
+            // Check if input is valid
+            bet = match input.trim().parse() {
+                Ok(num) => num,
+                Err(_) => {
+                    notification("Input a whole number greater than 0", 1);
+
+                    continue;
+                }
+            };
+            if bet > player.wealth {
+                notification("You don't have that much money", 1);
+
                 continue;
             }
-        };
-        if bet > player.wealth {
-            notification("You don't have that much money", 1);
 
-            continue;
+            break;
         }
 
         println!("You are betting ${bet}");
