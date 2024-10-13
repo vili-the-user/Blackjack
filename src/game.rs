@@ -1,71 +1,16 @@
 use whoami::fallible::realname;
 
 use std::cmp;
-use std::fmt;
-use std::io::{Write, Read};
+use std::io::Write;
 use std::thread::sleep;
 use std::time::Duration;
 use std::{io, u8};
-use std::fs::File;
 
 use rand::seq::SliceRandom;
 use rand::thread_rng;
-use bincode::{serialize, deserialize, Error};
 
-use serde::{Serialize, Deserialize};
-
-/// Serializes and writes player data to a file. If file doesn't exist, new one is created.
-/// 
-/// # Returns
-/// 
-/// Ok or Err if serialization failed, file creation failed or writing to file failed
-fn save(player: &Player) -> Result<(), Error> {
-    // Serialize player to a binary format
-    let encoded: Vec<u8> = serialize(player)?;
-
-    // Write binary data to a file
-    let mut file = File::create("save.blackjack")?;
-    file.write_all(&encoded)?;
-
-    Ok(())
-}
-
-/// Reads the save file and deserializes player object
-/// 
-/// # Returns
-/// 
-/// Ok containing player object or Err if file doesn't exist, failed to read file or failed to deserialize data
-fn load() -> Result<Player, String> {
-    let mut file = match File::open("save.blackjack") {
-        Ok(f) => f,
-        Err(_) => {
-            return Err(String::from("Couldn't find save file"));
-        }
-    };
-    let mut buffer = Vec::new();
-    match file.read_to_end(&mut buffer) {
-        Ok(_) => {},
-        Err(_) => {
-            return Err(String::from("Failed to read save file"));
-        }
-    };
-    
-    let player: Player = match deserialize(&buffer) {
-        Ok(p) => p,
-        Err(_) => {
-            return Err(String::from("Deserialization failed. Save file is corrupted"))
-        }
-    };
-    
-    Ok(player)
-}
-
-/// Player struct
-#[derive(Serialize, Deserialize)]
-struct Player {
-    name: String,
-    wealth: u32
-}
+use crate::save::{save, load, Player};
+use crate::utils::notification;
 
 // Create constant arrays for card icons and numbers
 const SUIT_ARRAY: [char; 4] = ['♠', '♣', '♥', '♦'];
@@ -306,18 +251,13 @@ fn game(player: &mut Player) -> Result<(), String> {
         let mut bet: u32 = match input.trim().parse() {
             Ok(num) => num,
             Err(_) => {
-                println!("Input a whole number greater than 0");
-                sleep(Duration::from_secs(1));
-                print!("\x1B[A\r\x1B[K");
-                io::stdout().flush().unwrap();
+                notification("Input a whole number greater than 0", 1);
                 continue;
             }
         };
         if bet > player.wealth {
-            println!("You don't have that much money");
-            sleep(Duration::from_secs(1));
-            print!("\x1B[A\r\x1B[K");
-            io::stdout().flush().unwrap();
+            notification("You don't have that much money", 1);
+
             continue;
         }
 
@@ -405,33 +345,25 @@ fn game(player: &mut Player) -> Result<(), String> {
                 input_int = match input.trim().parse() {
                     Ok(num) => num,
                     Err(_) => {
-                        println!("Input a number between 1 and 3");
-                        sleep(Duration::from_secs(1));
-                        print!("\x1B[A\r\x1B[K");
-                        io::stdout().flush().unwrap();
+                        notification("Input a number between 1 and 3", 1);
+
                         continue;
                     }
                 };
                 if input_int > 3 {
-                    println!("Input a number between 1 and 3");
-                    sleep(Duration::from_secs(1));
-                    print!("\x1B[A\r\x1B[K");
-                    io::stdout().flush().unwrap();
+                    notification("Input a number between 1 and 3", 1);
+
                     continue;
                 }
                 if input_int == 3 {            
                     if index > 1 {
-                        println!("You can't double down after hitting");
-                        sleep(Duration::from_secs(1));
-                        print!("\x1B[A\r\x1B[K");
-                        io::stdout().flush().unwrap();
+                        notification("You can't double down after hitting", 1);
+
                         continue;
                     }
                     else if player.wealth < bet {
-                        println!("You don't have enough money to double down");
-                        sleep(Duration::from_secs(1));
-                        print!("\x1B[A\r\x1B[K");
-                        io::stdout().flush().unwrap();
+                        notification("You don't have enough money to double down", 1);
+
                         continue;
                     }
                 }

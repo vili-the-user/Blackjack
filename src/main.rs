@@ -1,10 +1,13 @@
 use figlet_rs::FIGfont;
+use utils::notification;
 
 use std::io;
 use std::thread::sleep;
 use std::time::Duration;
 
 mod game;
+pub mod save;
+pub mod utils;
 
 fn main() -> io::Result<()> {
     // Create new big font for the intro
@@ -46,14 +49,14 @@ fn menu() {
         input_int = match input.trim().parse() {
             Ok(num) => num,
             Err(_) => {
-                println!("Input a number between 1 and 3");
-                sleep(Duration::from_secs(1));
+                notification("Input a number between 1 and 3", 1);
+
                 continue;
             }
         };
         if input_int > 3 {
-            println!("Input a number between 1 and 3");
-            sleep(Duration::from_secs(1));
+            notification("Input a number between 1 and 3", 1);
+
             continue;
         }
 
