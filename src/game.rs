@@ -417,9 +417,7 @@ fn game(player: &mut Player) -> Result<(), String> {
             sleep(Duration::from_secs(1));
 
             // Dealer stands on 17 or greater
-            if cards_value(&dealer_hand) < 17
-                && cards_value(&dealer_hand) <= cards_value(&player_hand)
-            {
+            if cards_value(&dealer_hand) < 17 {
                 deal_cards(&mut dealer_hand, &mut deck, 1)?;
                 // Print game state
                 print_game_state(&player_hand, &dealer_hand, true);
