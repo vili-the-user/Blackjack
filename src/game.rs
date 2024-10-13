@@ -14,6 +14,11 @@ use bincode::{serialize, deserialize, Error};
 
 use serde::{Serialize, Deserialize};
 
+/// Serializes and writes player data to a file. If file doesn't exist, new one is created.
+/// 
+/// # Returns
+/// 
+/// Ok or Err if serialization failed, file creation failed or writing to file failed
 fn save(player: &Player) -> Result<(), Error> {
     // Serialize player to a binary format
     let encoded: Vec<u8> = serialize(player)?;
@@ -25,12 +30,33 @@ fn save(player: &Player) -> Result<(), Error> {
     Ok(())
 }
 
-fn load() -> Result<Player, Box<dyn std::error::Error>> {
-    let mut file = File::open("save.blackjack")?;
+/// Reads the save file and deserializes player object
+/// 
+/// # Returns
+/// 
+/// Ok containing player object or Err if file doesn't exist, failed to read file or failed to deserialize data
+fn load() -> Result<Player, String> {
+    let mut file = match File::open("save.blackjack") {
+        Ok(f) => f,
+        Err(_) => {
+            return Err(String::from("Couldn't find save file"));
+        }
+    };
     let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
+    match file.read_to_end(&mut buffer) {
+        Ok(_) => {},
+        Err(_) => {
+            return Err(String::from("Failed to read save file"));
+        }
+    };
     
-    let player: Player = deserialize(&buffer)?;
+    let player: Player = match deserialize(&buffer) {
+        Ok(p) => p,
+        Err(_) => {
+            return Err(String::from("Deserialization failed. Save file is corrupted"))
+        }
+    };
+    
     Ok(player)
 }
 
@@ -41,26 +67,8 @@ struct Player {
     wealth: u32
 }
 
-/// Card struct
-struct Card {
-    num_str: String,
-    icon: char,
-}
-
-impl fmt::Debug for Card {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}{}", self.num_str, self.icon)
-    }
-}
-
-impl fmt::Display for Card {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}{}", self.num_str, self.icon)
-    }
-}
-
 // Create constant arrays for card icons and numbers
-const ICON_ARRAY: [char; 4] = ['♠', '♣', '♥', '♦'];
+const SUIT_ARRAY: [char; 4] = ['♠', '♣', '♥', '♦'];
 const NUM_ARRAY: [&str; 13] = [
     "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A",
 ];
@@ -69,18 +77,21 @@ const NUM_ARRAY: [&str; 13] = [
 ///
 /// # Returns
 ///
-/// Vec of Card objects
-fn create_deck_vec() -> Vec<Card> {
+/// Vec of strings
+fn create_deck_vec() -> Vec<String> {
     // Create new deck vector
-    let mut deck_vec: Vec<Card> = Vec::new();
+    let mut deck_vec: Vec<String> = Vec::new();
 
     // Add one card of each type to the vector
-    for icon in ICON_ARRAY {
+    for suit in SUIT_ARRAY {
         for num in NUM_ARRAY {
-            deck_vec.push(Card {
-                num_str: String::from(num),
-                icon: icon,
-            });
+
+            // Fuse card number and suit together
+            let mut card = String::from(num);
+            card.push(suit);
+
+            // Push card String to deck vec
+            deck_vec.push(card);
         }
     }
 
@@ -88,7 +99,7 @@ fn create_deck_vec() -> Vec<Card> {
 }
 
 /// Shuffles passed deck of cards
-fn shuffle_deck(deck_vec: &mut Vec<Card>) {
+fn shuffle_deck(deck_vec: &mut Vec<String>) {
     deck_vec.shuffle(&mut thread_rng());
 
     println!("Shuffling...");
@@ -100,25 +111,34 @@ fn shuffle_deck(deck_vec: &mut Vec<Card>) {
 /// # Returns
 ///
 /// u8
-fn cards_value(hand_vec: &Vec<Card>) -> u8 {
+fn cards_value(hand_vec: &Vec<String>) -> u8 {
     // Create variables for sum of card values and amount of aces
     let mut total: u8 = 0;
     let mut aces_amt: u8 = 0;
 
     // Go through each card in the hand and add up their values
     for card in hand_vec {
-        if card.num_str == "A" {
+
+        // Create clone of card to assume ownership
+        let mut card_value = card.clone();
+
+        // Pop out the suit from the card so that only the value can be read
+        match card_value.pop() {
+            Some(_) => {},
+            None    => { println!("Cannot pop card suit because the card is empty"); }
+        };
+
+        // Add card value to the total according to their number
+        if card == "A" {
             total += 11;
             aces_amt += 1;
-        } else if ["10", "J", "Q", "K"].contains(&card.num_str.as_str()) {
+        } else if ["10", "J", "Q", "K"].contains(&card.as_str()) {
             total += 10;
         } else {
             // Parse integer from card num string
-            let value: u8 = match card.num_str.parse() {
+            let value: u8 = match card.parse() {
                 Ok(num) => num,
-                Err(_) => {
-                    continue;
-                }
+                Err(_)      => { println!("Cannot parse integer from card value because it is unknown"); continue; }
             };
             total += value;
         }
@@ -132,28 +152,35 @@ fn cards_value(hand_vec: &Vec<Card>) -> u8 {
     return total;
 }
 
-// Deals a card to a hand vec from the deck vec
-fn deal_cards(to_vec: &mut Vec<Card>, from_vec: &mut Vec<Card>, amt_cards: u8) {
+/// Deals a card to a hand vec from the deck vec
+/// 
+/// # Returns
+/// 
+/// Ok or an Err if the deck is empty
+fn deal_cards(to_vec: &mut Vec<String>, from_vec: &mut Vec<String>, amt_cards: u8) -> Result<(), String> {
     for _ in 1..=amt_cards {
-        // Create variable for dealt card
-        let card: Card;
+
+        // Check if deck is empty
+        if from_vec.is_empty() {
+            return Err(String::from("Given deck is empty, cannot deal cards"));
+        }
 
         // Pop the card from the deck
-        match from_vec.pop() {
-            Some(card_popped) => card = card_popped,
-            None => {
-                panic!("Deck empty, cannot deal cards");
+        let dealt_card = match from_vec.pop() {
+            Some(card) => card,
+            None               => {
+                // If for some reason the deck is still empty despite the earlier check, return an Err
+                return Err(String::from("Deck was unexpectedly emptied while dealing")) 
             }
         };
 
-        sleep(Duration::from_millis(200));
-
-        to_vec.push(card);
+        to_vec.push(dealt_card);
     }
+    Ok(())
 }
 
 /// Prints the current hands and bet
-fn print_game_state(player_hand: &Vec<Card>, dealer_hand: &Vec<Card>, dealer_turn: bool) {
+fn print_game_state(player_hand: &Vec<String>, dealer_hand: &Vec<String>, dealer_turn: bool) {
     // Calculate total values for both player's and dealer's hands
     let player_hand_value: u8 = cards_value(&player_hand);
     let dealer_hand_value: u8 = cards_value(&dealer_hand);
@@ -200,7 +227,13 @@ pub fn new_game() {
     print!("\x1B[2J\x1B[1;1H");
 
     // Start new game loop
-    game(&mut player);
+    match game(&mut player) {
+        Ok(_) => {},
+        Err(err) => {
+            println!("{err}");
+            return;
+        }
+    };
 
     // Save player to the file again after loop ends
     match save(&player) {
@@ -217,8 +250,8 @@ pub fn load_game() {
     // Get player object from file
     let mut player = match load() {
         Ok(player) => { println!("Loaded save file created by {}", player.name); player },
-        Err(_) => {
-            println!("Save file is corrupted or doesn't exist. Make sure the save file and the app are in the same location");
+        Err(err) => {
+            println!("{err}");
             return;
         } 
     };
@@ -227,7 +260,13 @@ pub fn load_game() {
     print!("\x1B[2J\x1B[1;1H");
 
     // Start game loop
-    game(&mut player);
+    match game(&mut player) {
+        Ok(_) => {},
+        Err(err) => {
+            println!("{err}");
+            return;
+        }
+    };
 
     // Save player to the file again after loop ends
     match save(&player) {
@@ -240,7 +279,7 @@ pub fn load_game() {
 }
 
 /// Main game loop
-fn game(player: &mut Player) {
+fn game(player: &mut Player) -> Result<(), String> {
     // Create new deck and shuffle it
     let mut deck = create_deck_vec();
     shuffle_deck(&mut deck);
@@ -249,8 +288,7 @@ fn game(player: &mut Player) {
         match save(&player) {
             Ok(_) => { println!("Saved"); },
             Err(_) => { 
-                println!("An error occurred when saving");
-                return;
+                return Err(String::from("An error occurred while saving. Returning to main menu..."));
             }
         };
 
@@ -295,16 +333,26 @@ fn game(player: &mut Player) {
         }
 
         // Create empty hand vec for player and dealer
-        let mut player_hand: Vec<Card> = Vec::new();
-        let mut dealer_hand: Vec<Card> = Vec::new();
+        let mut player_hand: Vec<String> = Vec::new();
+        let mut dealer_hand: Vec<String> = Vec::new();
 
         // Deal cards to both
-        deal_cards(&mut player_hand, &mut deck, 2);
-        deal_cards(&mut dealer_hand, &mut deck, 2);
+        deal_cards(&mut player_hand, &mut deck, 2)?;
+        deal_cards(&mut dealer_hand, &mut deck, 2)?;
+
+        // Print game state before player's turn starts to show cards in case of blackjack
+        println!("\n--- YOUR TURN | BET: ${bet} ---");
+        println!("\n---");
+        println!("What do you want to do?");
+        println!("1. Hit");
+        println!("2. Stand");
+        println!("3. Double down");
 
         // If both player and dealer get blackjack
         if cards_value(&player_hand) == 21 && cards_value(&dealer_hand) == 21 {
             player.wealth = cmp::max(0, cmp::min(u32::MAX, player.wealth + bet));
+
+            print_game_state(&player_hand, &dealer_hand, true);
 
             println!("\n--- DRAW ---");
             println!("You and dealer both got a blackjack. You get {bet}$ back");
@@ -316,6 +364,8 @@ fn game(player: &mut Player) {
         if cards_value(&player_hand) == 21 {
             player.wealth = cmp::max(0, cmp::min(u32::MAX, player.wealth + bet * 2));
 
+            print_game_state(&player_hand, &dealer_hand, true);
+
             println!("\n--- YOU WON ---");
             println!("You got a blackjack. Won {}$", bet * 2);
 
@@ -324,22 +374,14 @@ fn game(player: &mut Player) {
 
         // If dealer gets blackjack
         if cards_value(&dealer_hand) == 21 {
+            print_game_state(&player_hand, &dealer_hand, true);
+
             println!("\n--- YOU LOST ---");
             println!("Dealer got a blackjack");
 
             continue;
         }
 
-        // Player's turn
-        println!("\n--- YOUR TURN | BET: ${bet} ---");
-        println!("\n---");
-        println!("What do you want to do?");
-        println!("1. Hit");
-        println!("2. Stand");
-        println!("3. Double down");
-
-        // Print current game state
-        print_game_state(&player_hand, &dealer_hand, false);
         let mut index: u8 = 0;
         while cards_value(&player_hand) <= 21 {
             // Create variable for user input integer
@@ -397,7 +439,7 @@ fn game(player: &mut Player) {
             }
 
             if input_int == 1 {
-                deal_cards(&mut player_hand, &mut deck, 1);
+                deal_cards(&mut player_hand, &mut deck, 1)?;
 
                 // Print game state
                 print_game_state(&player_hand, &dealer_hand, false);
@@ -409,7 +451,7 @@ fn game(player: &mut Player) {
                 player.wealth = cmp::max(0, cmp::min(u32::MAX, player.wealth - bet));
                 bet *= 2;
 
-                deal_cards(&mut player_hand, &mut deck, 1);
+                deal_cards(&mut player_hand, &mut deck, 1)?;
 
                 // Print game state
                 print_game_state(&player_hand, &dealer_hand, false);
@@ -439,7 +481,7 @@ fn game(player: &mut Player) {
             if cards_value(&dealer_hand) < 17
                 && cards_value(&dealer_hand) <= cards_value(&player_hand)
             {
-                deal_cards(&mut dealer_hand, &mut deck, 1);
+                deal_cards(&mut dealer_hand, &mut deck, 1)?;
                 // Print game state
                 print_game_state(&player_hand, &dealer_hand, true);
                 sleep(Duration::from_secs(1));
@@ -488,6 +530,7 @@ fn game(player: &mut Player) {
         }
     }
 
+    // If player runs out of money or somehow gets to u32 max, go back to main menu
     if player.wealth == 0 {
         println!("You ran out of money. Returning to main menu...");
         sleep(Duration::from_secs(2));
@@ -497,4 +540,6 @@ fn game(player: &mut Player) {
         println!("You have too much money. The casino can't provide for further wins. Returning to main menu...");
         sleep(Duration::from_secs(2));
     }
+
+    Ok(())
 }
