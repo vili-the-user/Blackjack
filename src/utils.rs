@@ -10,3 +10,8 @@ pub fn notification(msg: &str, sec: u64) {
     print!("\x1B[A\r\x1B[K");
     io::stdout().flush().unwrap();
 }
+
+/// Clears terminal completely
+pub fn clear_terminal() {
+    print!("\x1B[2J\x1B[1;1H");
+}

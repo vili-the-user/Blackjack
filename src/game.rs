@@ -10,7 +10,7 @@ use rand::seq::SliceRandom;
 use rand::thread_rng;
 
 use crate::save::{save, load, Player};
-use crate::utils::notification;
+use crate::utils::{notification, clear_terminal};
 
 // Create constant arrays for card icons and numbers
 const SUIT_ARRAY: [char; 4] = ['♠', '♣', '♥', '♦'];
@@ -159,8 +159,7 @@ pub fn new_game() {
         wealth: 10,
     };
 
-    // Clear terminal
-    print!("\x1B[2J\x1B[1;1H");
+    clear_terminal();
 
     // Create new save file
     match save(&player) {
@@ -175,8 +174,7 @@ pub fn new_game() {
     // Start new game loop
     match game(&mut player) {
         Ok(_) => {
-            // Clear terminal
-            print!("\x1B[2J\x1B[1;1H");
+            clear_terminal();
         },
         Err(err) => {
             println!("{err}");
@@ -197,8 +195,7 @@ pub fn new_game() {
 
 pub fn load_game() {
 
-    // Clear terminal
-    print!("\x1B[2J\x1B[1;1H");
+    clear_terminal();
 
     // Get player object from file
     let mut player = match load() {
@@ -213,8 +210,7 @@ pub fn load_game() {
     // Start game loop
     match game(&mut player) {
         Ok(_) => {
-            // Clear terminal
-            print!("\x1B[2J\x1B[1;1H");
+            clear_terminal();
         },
         Err(err) => {
             notification(&format!("{}", err), 2);
