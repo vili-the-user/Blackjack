@@ -130,10 +130,10 @@ fn print_game_state(player_hand: &Vec<String>, dealer_hand: &Vec<String>, dealer
     let dealer_hand_value: u8 = cards_value(&dealer_hand);
 
     if dealer_turn {
-        print!("\r\x1B[6A\x1B[KYour cards: {:?} ({player_hand_value})\tDealer's cards: {:?} ({dealer_hand_value})\r\x1B[6B", player_hand, dealer_hand);
+        print!("\r\x1B[6A\x1B[KYour cards: [{}] ({player_hand_value})\tDealer's cards: [{}] ({dealer_hand_value})\r\x1B[6B", player_hand.join(", "), dealer_hand.join(", "));
         io::stdout().flush().unwrap();
     } else {
-        print!("\r\x1B[6A\x1B[KYour cards: {:?} ({player_hand_value})\tDealer's cards: [{}, ??] (??)\x1B[6B\r", player_hand, dealer_hand[0]);
+        print!("\r\x1B[6A\x1B[KYour cards: [{}] ({player_hand_value})\tDealer's cards: [{}, ??] (??)\x1B[6B\r", player_hand.join(", "), dealer_hand[0]);
         io::stdout().flush().unwrap();
     }
     sleep(Duration::from_secs(1));
