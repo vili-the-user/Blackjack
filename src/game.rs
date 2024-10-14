@@ -8,6 +8,7 @@ use std::{io, u8};
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 
+use crate::input;
 use crate::save::{save, load, Player};
 use crate::utils::{notification, clear_terminal};
 
@@ -74,22 +75,22 @@ fn cards_value(hand_vec: &Vec<String>) -> u8 {
 
         // Add card value to the total according to their number
         if card_value == "A" {
-            total += 11;
+            total = total.saturating_add(11);
             aces_amt += 1;
         } else if ["10", "J", "Q", "K"].contains(&card_value.as_str()) {
-            total += 10;
+            total = total.saturating_add(10);
         } else {
             // Parse integer from card num string
             let value: u8 = match card_value.parse() {
                 Ok(num) => num,
                 Err(_)      => { println!("Cannot parse integer from card value because it is unknown"); continue; }
             };
-            total += value;
+            total = total.saturating_add(value);
         }
     }
     // If there are aces in the hand and the total value exceeds 21, the aces' value changes from 11 to 1
     while total > 21 && aces_amt > 0 {
-        total -= 10;
+        total = total.saturating_sub(10);
         aces_amt -= 1;
     }
 
@@ -342,9 +343,7 @@ fn game(player: &mut Player) -> Result<(), String> {
 
         // Player's turn
         let mut index: u8 = 0;
-        while cards_value(&player_hand) <= 21 {
-            // Create variable for user input integer
-            let mut input_int: u8;
+        'player_turn: while cards_value(&player_hand) <= 21 {
 
             // Add to index
             index += 1;
@@ -360,54 +359,61 @@ fn game(player: &mut Player) -> Result<(), String> {
                 print!("\x1B[A\r\x1B[K");
                 io::stdout().flush().unwrap();
 
-                // Check if input is valid
-                input_int = match input.trim().parse() {
-                    Ok(num) => num,
+                // Get GameOption from input if it's valid
+                let option = match input.trim().parse::<u8>() {
+                    Ok(num) => match input::InGameOptions::try_from(num) {
+                        Ok(option) => option,
+                        Err(err) => {
+                            notification(&format!("{}", err), 1);
+                            continue;
+                        }
+                    },
                     Err(_) => {
-                        notification("Input a number between 1 and 3", 1);
-
+                        notification("Input must be a number", 1);
                         continue;
                     }
                 };
-                if input_int > 3 {
-                    notification("Input a number between 1 and 3", 1);
 
-                    continue;
-                }
-                if input_int == 3 {            
-                    if index > 1 {
-                        notification("You can't double down after hitting", 1);
+                // Handle different options
+                match option {
+                    // If player hits
+                    input::InGameOptions::Hit => {
+                        deal_cards(&mut player_hand, &mut deck, 1)?;
 
-                        continue;
-                    }
-                    else if player.wealth < bet {
-                        notification("You don't have enough money to double down", 1);
+                        // Print game state
+                        print_game_state(&player_hand, &dealer_hand, false);
 
-                        continue;
-                    }
-                }
-                break;
-            }
+                        break;
+                    },
+                    // If player stands
+                    input::InGameOptions::Stand => {
+                        break 'player_turn;
+                    },
+                    // If player doubles down
+                    input::InGameOptions::DoubleDown => {
+                        if index > 1 {
+                            notification("You can't double down after hitting", 1);
+    
+                            continue;
+                        } else if player.wealth < bet {
+                            notification("You don't have enough money to double down", 1);
+    
+                            continue;
+                        } else {
+                            // Double down allows player to only hit once with double the bet
+                            // Reduce bet again from player's wealth to compensate for doubled bet
+                            player.wealth = player.wealth.saturating_sub(bet);
+                            bet *= 2;
 
-            if input_int == 1 {
-                deal_cards(&mut player_hand, &mut deck, 1)?;
+                            deal_cards(&mut player_hand, &mut deck, 1)?;
 
-                // Print game state
-                print_game_state(&player_hand, &dealer_hand, false);
-            } else if input_int == 2 {
-                break;
-            } else if input_int == 3 {
-                // Double down allows player to only hit once with double the bet
-                // Reduce bet again from player's wealth to compensate for doubled bet
-                player.wealth = player.wealth.saturating_sub(bet);
-                bet *= 2;
+                            // Print game state
+                            print_game_state(&player_hand, &dealer_hand, false);
 
-                deal_cards(&mut player_hand, &mut deck, 1)?;
-
-                // Print game state
-                print_game_state(&player_hand, &dealer_hand, false);
-
-                break;
+                            break;
+                        }
+                    },
+                };
             }
         }
 
