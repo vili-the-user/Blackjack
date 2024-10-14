@@ -52,12 +52,12 @@ fn menu() {
                 Ok(num) => match input::MainMenuOptions::try_from(num) {
                     Ok(option) => option,
                     Err(err) => {
-                        notification(&format!("{}", err), 1);
+                        notification(&format!("{}", err), utils::NotificationDuration::Short);
                         continue;
                     }
                 },
                 Err(_) => {
-                    notification("Input must be a number", 1);
+                    notification("Input must be a number", utils::NotificationDuration::Short);
                     continue;
                 }
             };

@@ -10,7 +10,7 @@ use rand::thread_rng;
 
 use crate::input;
 use crate::save::{save, load, Player};
-use crate::utils::{notification, clear_terminal};
+use crate::utils::{clear_terminal, notification, NotificationDuration};
 
 // Create constant arrays for card icons and numbers
 const SUIT_ARRAY: [char; 4] = ['♠', '♣', '♥', '♦'];
@@ -165,7 +165,7 @@ pub fn new_game() {
     match save(&player) {
         Ok(_) => { println!("Created new save as {}", player.name); },
         Err(_) => { 
-            notification("An error occurred when saving", 2);
+            notification("An error occurred when saving", NotificationDuration::Long);
 
             return;
         }
@@ -184,9 +184,9 @@ pub fn new_game() {
 
     // Save player to the file again after loop ends
     match save(&player) {
-        Ok(_) => { notification("Saved", 1); },
+        Ok(_) => { notification("Saved", NotificationDuration::Short); },
             Err(_) => { 
-                notification("An error occurred when saving", 2);
+                notification("An error occurred when saving", NotificationDuration::Long);
 
                 return;
             }
@@ -201,7 +201,7 @@ pub fn load_game() {
     let mut player = match load() {
         Ok(player) => { println!("Loaded save file created by {}", player.name); player },
         Err(err) => {
-            notification(&format!("{}", err), 2);
+            notification(&format!("{}", err), NotificationDuration::Long);
 
             return;
         } 
@@ -213,16 +213,16 @@ pub fn load_game() {
             clear_terminal();
         },
         Err(err) => {
-            notification(&format!("{}", err), 2);
+            notification(&format!("{}", err), NotificationDuration::Long);
             return;
         }
     };
 
     // Save player to the file again after loop ends
     match save(&player) {
-        Ok(_) => { notification("Saved", 1); },
+        Ok(_) => { notification("Saved", NotificationDuration::Short); },
         Err(_) => { 
-            notification("An error occurred when saving", 2);
+            notification("An error occurred when saving", NotificationDuration::Long);
             return;
         }
     };
@@ -236,7 +236,7 @@ fn game(player: &mut Player) -> Result<(), String> {
 
     while player.wealth > 0 && player.wealth < u16::MAX {
         match save(&player) {
-            Ok(_) => { notification("Saved", 1); },
+            Ok(_) => { notification("Saved", NotificationDuration::Short); },
             Err(_) => { 
                 return Err(String::from("An error occurred while saving. Returning to main menu..."));
             }
@@ -264,13 +264,13 @@ fn game(player: &mut Player) -> Result<(), String> {
             bet = match input.trim().parse() {
                 Ok(num) => num,
                 Err(_) => {
-                    notification("Input a whole number greater than 0", 1);
+                    notification("Input a whole number greater than 0", NotificationDuration::Short);
 
                     continue;
                 }
             };
             if bet > player.wealth {
-                notification("You don't have that much money", 1);
+                notification("You don't have that much money", NotificationDuration::Short);
 
                 continue;
             }
@@ -364,12 +364,12 @@ fn game(player: &mut Player) -> Result<(), String> {
                     Ok(num) => match input::InGameOptions::try_from(num) {
                         Ok(option) => option,
                         Err(err) => {
-                            notification(&format!("{}", err), 1);
+                            notification(&format!("{}", err), NotificationDuration::Short);
                             continue;
                         }
                     },
                     Err(_) => {
-                        notification("Input must be a number", 1);
+                        notification("Input must be a number", NotificationDuration::Short);
                         continue;
                     }
                 };
@@ -392,11 +392,11 @@ fn game(player: &mut Player) -> Result<(), String> {
                     // If player doubles down
                     input::InGameOptions::DoubleDown => {
                         if index > 1 {
-                            notification("You can't double down after hitting", 1);
+                            notification("You can't double down after hitting", NotificationDuration::Short);
     
                             continue;
                         } else if player.wealth < bet {
-                            notification("You don't have enough money to double down", 1);
+                            notification("You don't have enough money to double down", NotificationDuration::Short);
     
                             continue;
                         } else {
