@@ -1,7 +1,7 @@
 # Blackjack
 This simple console application lets you play the classic card game Blackjack. It supports saving & loading to a file so you can continue where you left.
 
-![image](https://github.com/user-attachments/assets/b2ffe70d-76de-4e20-a20b-aac810561e6f)
+![image](https://github.com/user-attachments/assets/f9fb7852-2819-48c2-b3d5-e4a761014283)
 
 ## Gameplay
 You start with $10 and the game ends if you lose all your money. If you get very rich, you may win the game. 
