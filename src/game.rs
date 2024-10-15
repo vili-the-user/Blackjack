@@ -410,7 +410,7 @@ fn game(player: &mut Player) -> Result<(), String> {
                             // Print game state
                             print_game_state(&player_hand, &dealer_hand, false);
 
-                            break;
+                            break 'player_turn;
                         }
                     },
                 };
