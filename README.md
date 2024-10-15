@@ -13,7 +13,11 @@ The game is automatically saved every round, indicated by a text saying "saved".
 ![image](https://github.com/user-attachments/assets/159841fb-7540-4150-b658-ba7f7caad7bc)
 
 ## Installation
-If you're not familiar with Rust but still want to try the app: 
+Download the exe-file:
+- Go to this project's releases section
+- Download the exe file
+  
+Alternative way to install (build the app yourself): 
 - Clone this project to your PC
 - Open cmd in the folder you cloned the project into
 - Type in ```cargo build --release```
